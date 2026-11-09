@@ -1,31 +1,19 @@
 module(
-    name = "lichess_qa",
+    name = "virgin_booking_qa",
     version = "0.1.0",
 )
 
 bazel_dep(name = "platforms", version = "1.1.0")
 bazel_dep(name = "rules_java", version = "9.9.0")
 bazel_dep(name = "rules_jvm_external", version = "7.2")
-bazel_dep(name = "protobuf", version = "36.2", repo_name = "com_google_protobuf")
-bazel_dep(name = "rules_proto", version = "7.1.0")
-bazel_dep(name = "grpc-java", version = "1.84.0", repo_name = "io_grpc_grpc_java")
 
-# Third-party Java libraries. grpc-java contributes its own artifacts to the same
-# "maven" repository, so rules_jvm_external resolves one consistent version set.
 maven = use_extension("@rules_jvm_external//:extensions.bzl", "maven")
 maven.install(
+    # rules_java pulls protobuf, which also installs into this maven repo.
+    known_contributing_modules = ["protobuf"],
     artifacts = [
-        "com.fasterxml.jackson.core:jackson-databind:2.20.1",
-        # Needed by Cucumber's JSON report plugin.
-        "com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.20.1",
-        # Generated gRPC stubs return Guava's ListenableFuture. Same version grpc-java uses.
-        "com.google.guava:guava:33.6.0-android",
-        "io.cucumber:cucumber-java:8.0.4",
-        "io.cucumber:cucumber-testng:8.0.4",
-        "io.cucumber:cucumber-picocontainer:8.0.4",
+        "io.rest-assured:json-path:6.3.0",
         "io.rest-assured:rest-assured:6.3.0",
-        "io.rest-assured:json-schema-validator:6.3.0",
-        "org.assertj:assertj-core:3.27.7",
         "org.hamcrest:hamcrest:3.0",
         "org.slf4j:slf4j-simple:2.0.17",
         "org.testng:testng:7.12.0",
@@ -35,42 +23,3 @@ maven.install(
     ],
 )
 use_repo(maven, "maven")
-
-# Prebuilt gRPC Java code generator (protoc plugin), one binary per OS, used by
-# //tools/grpc:java_grpc_library.bzl so no C++ compiler is needed on any OS.
-# Keep the version in sync with grpc-java above.
-http_file = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_file")
-
-GRPC_JAVA_PLUGIN_URL = "https://repo.maven.apache.org/maven2/io/grpc/protoc-gen-grpc-java/1.84.0/protoc-gen-grpc-java-1.84.0-{}.exe"
-
-http_file(
-    name = "protoc_gen_grpc_java_linux_x86_64",
-    downloaded_file_path = "protoc-gen-grpc-java",
-    executable = True,
-    sha256 = "907c2d4efc2bae9b21cada75c31b36f3821e15b7be96311e214a6be65bcd20aa",
-    urls = [GRPC_JAVA_PLUGIN_URL.format("linux-x86_64")],
-)
-
-http_file(
-    name = "protoc_gen_grpc_java_linux_aarch64",
-    downloaded_file_path = "protoc-gen-grpc-java",
-    executable = True,
-    sha256 = "d9357761b4e69ddc7abec3d3a80e1096b5eda3e25d6ed6d0b1ead07066600a86",
-    urls = [GRPC_JAVA_PLUGIN_URL.format("linux-aarch_64")],
-)
-
-http_file(
-    name = "protoc_gen_grpc_java_osx_x86_64",
-    downloaded_file_path = "protoc-gen-grpc-java",
-    executable = True,
-    sha256 = "49aab9e56a30a8484e9c32d36be12a351d5783e00bdaafe9ec2c2fd8c9029504",
-    urls = [GRPC_JAVA_PLUGIN_URL.format("osx-x86_64")],
-)
-
-http_file(
-    name = "protoc_gen_grpc_java_windows_x86_64",
-    downloaded_file_path = "protoc-gen-grpc-java.exe",
-    executable = True,
-    sha256 = "1d0b584f436c2521542a98914d8e6c42ba0aa5d86b459bc632e4c3884a3b5d4d",
-    urls = [GRPC_JAVA_PLUGIN_URL.format("windows-x86_64")],
-)
