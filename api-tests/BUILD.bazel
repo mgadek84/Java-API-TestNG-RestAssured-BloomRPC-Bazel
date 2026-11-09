@@ -53,8 +53,9 @@ testng_test(
     runtime_deps = ["@maven//:org_slf4j_slf4j_simple"],
 )
 
-# Live GET of the passenger-form config the Virgin Australia booking UI loads.
-# The URL embeds a build id, so this 404s when that build is retired.
+# Live calls the Virgin Australia booking UI makes: the passenger-form config
+# (URL embeds a build id, so the GET 404s when that build is retired) and the
+# GraphQL air search.
 testng_test(
     name = "passenger_configuration_test",
     srcs = glob(["src/test/java/io/github/mgadek84/virgin/*.java"]),
@@ -66,6 +67,7 @@ testng_test(
         "requires-network",
     ],
     deps = [
+        "@maven//:io_rest_assured_json_path",
         "@maven//:io_rest_assured_rest_assured",
         "@maven//:org_hamcrest_hamcrest",
         "@maven//:org_testng_testng",
