@@ -8,14 +8,16 @@ Built as interview practice for an SDET role that asks for Java, TestNG, RestAss
 
 | Path | What it is |
 | --- | --- |
-| `api-tests/` | RestAssured + TestNG against Lichess: specs, config, POJOs, custom AssertJ assertions, JSON Schema |
+| `api-tests/` | RestAssured + TestNG against Lichess, plus one GET of the Virgin Australia booking passenger config |
 | `bdd-tests/` | Cucumber features on the TestNG runner. Steps reuse `api-tests` |
 | `chess-service/` | `ChessService` gRPC server: FEN validation, and a gateway over `GET /api/user/{username}` |
 | `proto/chess/v1/` | The `.proto` BloomRPC imports |
 | `tools/testng/` | A Bazel macro that runs TestNG (Bazel's built-in runner only knows JUnit) |
 | `tools/grpc/` | Generates Java gRPC stubs from prebuilt `protoc` binaries, so no C++ compiler is required |
 
-Only unauthenticated Lichess endpoints are used: user profile, game export (JSON and PGN), puzzles, cloud eval. Tests run serially, wait at least 1 second between calls, and on HTTP 429 wait and retry once, then skip instead of failing.
+Only unauthenticated Lichess endpoints are used: user profile, game export (JSON and PGN), puzzles, cloud eval. Those tests run serially, wait at least 1 second between calls, and on HTTP 429 wait and retry once, then skip instead of failing.
+
+`//api-tests:passenger_configuration_test` is a separate live check. It GETs the passenger-form JSON the Virgin Australia booking page loads (`passengerConfiguration.json` on `book.virginaustralia.com`) and checks adult age bounds, name-field order, and the unaccompanied-minor rule. The URL contains the booking-app build id, so when Virgin ships a new build the test starts returning 404 and the constant in `PassengerConfigurationTest` has to be updated.
 
 ## Run everything
 
@@ -32,6 +34,7 @@ Single targets:
 
 ```bash
 bazel test //api-tests:lichess_api_test
+bazel test //api-tests:passenger_configuration_test
 bazel test //api-tests:framework_test
 bazel test //chess-service:chess_service_test
 bazel test //bdd-tests:bdd_hermetic_test

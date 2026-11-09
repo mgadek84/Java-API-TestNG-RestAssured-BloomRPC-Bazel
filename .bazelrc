@@ -17,9 +17,11 @@ test --test_summary=terse
 test --test_verbose_timeout_warnings
 
 # Tests that call the live Lichess API carry the "lichess" tag.
+# Anything that calls a system outside the repo also carries "external"
+# (Lichess and the Virgin Australia booking config).
 #   bazel test --config=hermetic //...     only offline tests
-#   bazel test --config=lichess //...      only the live API tests
-test:hermetic --test_tag_filters=-lichess
+#   bazel test --config=lichess //...      only the live Lichess tests
+test:hermetic --test_tag_filters=-lichess,-external
 test:lichess --test_tag_filters=lichess
 
 # Machine-specific overrides (for example a shorter --output_user_root on Windows).
