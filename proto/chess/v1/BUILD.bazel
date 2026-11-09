@@ -1,0 +1,26 @@
+load("@com_google_protobuf//bazel:java_proto_library.bzl", "java_proto_library")
+load("@com_google_protobuf//bazel:proto_library.bzl", "proto_library")
+load("//tools/grpc:java_grpc_library.bzl", "java_grpc_library")
+
+package(default_visibility = ["//visibility:public"])
+
+# Also importable as a plain file by BloomRPC / Postman / grpcurl.
+exports_files(["chess_service.proto"])
+
+proto_library(
+    name = "chess_proto",
+    srcs = ["chess_service.proto"],
+)
+
+# Message classes (ValidateFenRequest, PlayerProfile, ...).
+java_proto_library(
+    name = "chess_java_proto",
+    deps = [":chess_proto"],
+)
+
+# Service stubs and base class (ChessServiceGrpc).
+java_grpc_library(
+    name = "chess_java_grpc",
+    srcs = [":chess_proto"],
+    deps = [":chess_java_proto"],
+)

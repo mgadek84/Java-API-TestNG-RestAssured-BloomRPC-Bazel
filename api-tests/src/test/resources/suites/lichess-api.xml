@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
+<!-- Serial on purpose: Lichess allows one request at a time per client. -->
+<suite name="lichess-api" parallel="none" verbose="1">
+  <test name="lichess-rest">
+    <classes>
+      <class name="io.github.mgadek84.lichess.api.tests.UserApiTest"/>
+      <class name="io.github.mgadek84.lichess.api.tests.GameExportApiTest"/>
+      <class name="io.github.mgadek84.lichess.api.tests.PuzzleApiTest"/>
+      <class name="io.github.mgadek84.lichess.api.tests.CloudEvalApiTest"/>
+    </classes>
+  </test>
+</suite>

@@ -1,0 +1,52 @@
+load("@rules_java//java:defs.bzl", "java_library")
+load("//tools/testng:testng.bzl", "testng_test")
+
+# Step definitions, runners, feature files and suites. Steps reuse the REST framework from
+# //api-tests and the gRPC stubs from //proto, which is the monorepo payoff: one framework,
+# several test layers.
+java_library(
+    name = "bdd",
+    testonly = True,
+    srcs = glob(["src/test/java/**/*.java"]),
+    resources = glob(["src/test/resources/**"]),
+    resource_strip_prefix = "bdd-tests/src/test/resources",
+    deps = [
+        "//api-tests:framework",
+        "//chess-service:chess_service",
+        "//proto/chess/v1:chess_java_grpc",
+        "//proto/chess/v1:chess_java_proto",
+        "@io_grpc_grpc_java//api",
+        "@maven//:io_cucumber_cucumber_java",
+        "@maven//:io_cucumber_cucumber_testng",
+        "@maven//:io_rest_assured_rest_assured",
+        "@maven//:org_assertj_assertj_core",
+    ],
+    runtime_deps = [
+        "@io_grpc_grpc_java//netty",
+        "@maven//:com_fasterxml_jackson_datatype_jackson_datatype_jdk8",
+        "@maven//:io_cucumber_cucumber_picocontainer",
+        "@maven//:org_slf4j_slf4j_simple",
+    ],
+)
+
+# Scenarios not tagged @lichess: gRPC against the embedded ChessService. No internet needed.
+testng_test(
+    name = "bdd_hermetic_test",
+    size = "small",
+    suites = ["suites/bdd-hermetic.xml"],
+    runtime_deps = [":bdd"],
+)
+
+# Scenarios tagged @lichess: real calls to lichess.org (see //api-tests for the tag meanings).
+testng_test(
+    name = "bdd_lichess_test",
+    timeout = "long",
+    suites = ["suites/bdd-lichess.xml"],
+    tags = [
+        "exclusive",
+        "external",
+        "lichess",
+        "requires-network",
+    ],
+    runtime_deps = [":bdd"],
+)
