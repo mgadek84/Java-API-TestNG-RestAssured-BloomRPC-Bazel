@@ -53,6 +53,26 @@ testng_test(
     runtime_deps = ["@maven//:org_slf4j_slf4j_simple"],
 )
 
+# Live GET of the passenger-form config the Virgin Australia booking UI loads.
+# The URL embeds a build id, so this 404s when that build is retired.
+testng_test(
+    name = "passenger_configuration_test",
+    srcs = glob(["src/test/java/io/github/mgadek84/virgin/*.java"]),
+    resources = glob(["src/test/resources/**"]),
+    resource_strip_prefix = "api-tests/src/test/resources",
+    suites = ["suites/virgin-passenger.xml"],
+    tags = [
+        "external",
+        "requires-network",
+    ],
+    deps = [
+        "@maven//:io_rest_assured_rest_assured",
+        "@maven//:org_hamcrest_hamcrest",
+        "@maven//:org_testng_testng",
+    ],
+    runtime_deps = ["@maven//:org_slf4j_slf4j_simple"],
+)
+
 # Hermetic unit tests of the framework itself (rate limiting / 429 back-off).
 testng_test(
     name = "framework_test",
