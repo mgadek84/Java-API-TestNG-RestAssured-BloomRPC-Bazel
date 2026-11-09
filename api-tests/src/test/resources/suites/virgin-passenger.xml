@@ -4,6 +4,7 @@
   <test name="passenger-configuration">
     <classes>
       <class name="io.github.mgadek84.virgin.PassengerConfigurationTest"/>
+      <class name="io.github.mgadek84.virgin.AirSearchTest"/>
     </classes>
   </test>
 </suite>

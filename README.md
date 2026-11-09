@@ -8,7 +8,7 @@ Built as interview practice for an SDET role that asks for Java, TestNG, RestAss
 
 | Path | What it is |
 | --- | --- |
-| `api-tests/` | RestAssured + TestNG against Lichess, plus one GET of the Virgin Australia booking passenger config |
+| `api-tests/` | RestAssured + TestNG against Lichess, plus Virgin Australia booking calls (passenger config GET, flight-search GraphQL) |
 | `bdd-tests/` | Cucumber features on the TestNG runner. Steps reuse `api-tests` |
 | `chess-service/` | `ChessService` gRPC server: FEN validation, and a gateway over `GET /api/user/{username}` |
 | `proto/chess/v1/` | The `.proto` BloomRPC imports |
@@ -17,7 +17,10 @@ Built as interview practice for an SDET role that asks for Java, TestNG, RestAss
 
 Only unauthenticated Lichess endpoints are used: user profile, game export (JSON and PGN), puzzles, cloud eval. Those tests run serially, wait at least 1 second between calls, and on HTTP 429 wait and retry once, then skip instead of failing.
 
-`//api-tests:passenger_configuration_test` is a separate live check. It GETs the passenger-form JSON the Virgin Australia booking page loads (`passengerConfiguration.json` on `book.virginaustralia.com`) and checks adult age bounds, name-field order, and the unaccompanied-minor rule. The URL contains the booking-app build id, so when Virgin ships a new build the test starts returning 404 and the constant in `PassengerConfigurationTest` has to be updated.
+`//api-tests:passenger_configuration_test` is a separate live check against the Virgin Australia booking site, both found in DevTools while searching Sydney to Brisbane:
+
+- `GET .../passengerConfiguration.json`, the passenger-form config. It checks adult age bounds, name-field order, and the unaccompanied-minor rule. The URL contains the booking-app build id, so when Virgin ships a new build the test starts returning 404 and the constant in `PassengerConfigurationTest` has to be updated.
+- `POST /api/graphql` operation `bookingAirSearch`. The response field `originalResponse` is a large nested shopping document. The test walks one path through it with RestAssured JsonPath (first offer, SYD to BNE, airline `VA`, a price in AUD) instead of comparing the whole body. Header `x-sabre-storefront: VADX` is required. Brisbane's airport code is `BNE`. The departure date is fourteen days ahead. Imperva blocks that POST when RestAssured's Apache client sends it (HTTP 403) and allows the JDK `HttpClient`, so the call uses the JDK client and JsonPath does the checks.
 
 ## Run everything
 
