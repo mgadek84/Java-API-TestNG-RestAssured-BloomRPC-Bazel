@@ -1,0 +1,57 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Lichess public user profile (GET /api/user/{username})",
+  "definitions": {
+    "ratedPerf": {
+      "description": "Glicko-2 rated perf: bullet, blitz, rapid, puzzle, variants...",
+      "type": "object",
+      "required": ["games", "rating", "rd"],
+      "properties": {
+        "games": { "type": "integer", "minimum": 0 },
+        "rating": { "type": "integer" },
+        "rd": { "type": "integer", "minimum": 0 },
+        "prog": { "type": "integer" },
+        "prov": { "type": "boolean" }
+      }
+    },
+    "puzzleModePerf": {
+      "description": "Score-based puzzle modes: storm, racer, streak.",
+      "type": "object",
+      "required": ["runs", "score"],
+      "properties": {
+        "runs": { "type": "integer", "minimum": 0 },
+        "score": { "type": "integer", "minimum": 0 }
+      }
+    }
+  },
+  "type": "object",
+  "required": ["id", "username", "perfs", "createdAt", "seenAt", "url", "count"],
+  "properties": {
+    "id": { "type": "string", "pattern": "^[a-z0-9_-]{2,30}$" },
+    "username": { "type": "string", "minLength": 2, "maxLength": 30 },
+    "url": { "type": "string", "pattern": "^https://lichess\\.org/@/" },
+    "createdAt": { "type": "integer", "minimum": 0 },
+    "seenAt": { "type": "integer", "minimum": 0 },
+    "disabled": { "type": "boolean" },
+    "perfs": {
+      "type": "object",
+      "additionalProperties": {
+        "oneOf": [
+          { "$ref": "#/definitions/ratedPerf" },
+          { "$ref": "#/definitions/puzzleModePerf" }
+        ]
+      }
+    },
+    "count": {
+      "type": "object",
+      "required": ["all", "rated", "win", "loss", "draw"],
+      "properties": {
+        "all": { "type": "integer", "minimum": 0 },
+        "rated": { "type": "integer", "minimum": 0 },
+        "win": { "type": "integer", "minimum": 0 },
+        "loss": { "type": "integer", "minimum": 0 },
+        "draw": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

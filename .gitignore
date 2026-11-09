@@ -1,0 +1,12 @@
+# Bazel output symlinks
+/bazel-*
+# Personal Bazel flags (see .bazelrc)
+/user.bazelrc
+
+# IDEs
+.idea/
+.ijwb/
+.vscode/
+*.iml
+
+.DS_Store

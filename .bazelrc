@@ -1,0 +1,26 @@
+# Hermetic JDK: Bazel downloads its own JDK 21, so the build does not depend on
+# whatever Java is installed (Windows, macOS, Linux, CI).
+common --java_language_version=21
+common --java_runtime_version=remotejdk_21
+common --tool_java_language_version=21
+common --tool_java_runtime_version=remotejdk_21
+
+# Picks up the build:windows / build:linux / build:macos lines below automatically.
+common --enable_platform_specific_config
+
+# Java tests read feature files from the classpath, which works everywhere.
+# Runfiles are opt-in on Windows and some tools still look for them.
+build:windows --enable_runfiles
+
+test --test_output=errors
+test --test_summary=terse
+test --test_verbose_timeout_warnings
+
+# Tests that call the live Lichess API carry the "lichess" tag.
+#   bazel test --config=hermetic //...     only offline tests
+#   bazel test --config=lichess //...      only the live API tests
+test:hermetic --test_tag_filters=-lichess
+test:lichess --test_tag_filters=lichess
+
+# Machine-specific overrides (for example a shorter --output_user_root on Windows).
+try-import %workspace%/user.bazelrc

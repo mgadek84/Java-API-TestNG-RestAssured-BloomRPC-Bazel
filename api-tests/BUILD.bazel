@@ -1,0 +1,70 @@
+load("@rules_java//java:defs.bzl", "java_library")
+load("//tools/testng:testng.bzl", "testng_test")
+
+package(default_visibility = ["//visibility:public"])
+
+# Reusable test framework: config, specs, rate limiting, API objects, models, assertions.
+# Shared by the TestNG tests below and by the Cucumber steps in //bdd-tests.
+java_library(
+    name = "framework",
+    testonly = True,
+    srcs = glob(["src/main/java/**/*.java"]),
+    resources = glob(["src/main/resources/**"]),
+    resource_strip_prefix = "api-tests/src/main/resources",
+    deps = [
+        "@maven//:com_fasterxml_jackson_core_jackson_annotations",
+        "@maven//:io_rest_assured_json_schema_validator",
+        "@maven//:io_rest_assured_rest_assured",
+        "@maven//:org_assertj_assertj_core",
+        "@maven//:org_hamcrest_hamcrest",
+        "@maven//:org_testng_testng",
+    ],
+    runtime_deps = [
+        # RestAssured picks up Jackson from the classpath for .as(Pojo.class).
+        "@maven//:com_fasterxml_jackson_core_jackson_databind",
+    ],
+)
+
+# Live tests against lichess.org:
+#   exclusive  - never runs in parallel with another target (Lichess: one request at a time)
+#   external   - never cached: the API can change under us, so always re-run
+#   lichess    - lets you include/exclude them: --config=hermetic / --config=lichess
+testng_test(
+    name = "lichess_api_test",
+    srcs = glob(["src/test/java/io/github/mgadek84/lichess/api/tests/*.java"]),
+    resources = glob(["src/test/resources/**"]),
+    resource_strip_prefix = "api-tests/src/test/resources",
+    suites = ["suites/lichess-api.xml"],
+    tags = [
+        "exclusive",
+        "external",
+        "lichess",
+        "requires-network",
+    ],
+    # Allows one 60 s back-off on HTTP 429 without hitting the test timeout.
+    timeout = "long",
+    deps = [
+        ":framework",
+        "@maven//:io_rest_assured_rest_assured",
+        "@maven//:org_assertj_assertj_core",
+        "@maven//:org_hamcrest_hamcrest",
+        "@maven//:org_testng_testng",
+    ],
+    runtime_deps = ["@maven//:org_slf4j_slf4j_simple"],
+)
+
+# Hermetic unit tests of the framework itself (rate limiting / 429 back-off).
+testng_test(
+    name = "framework_test",
+    size = "small",
+    srcs = glob(["src/test/java/io/github/mgadek84/lichess/api/http/*.java"]),
+    resources = glob(["src/test/resources/**"]),
+    resource_strip_prefix = "api-tests/src/test/resources",
+    suites = ["suites/framework-unit.xml"],
+    deps = [
+        ":framework",
+        "@maven//:io_rest_assured_rest_assured",
+        "@maven//:org_assertj_assertj_core",
+        "@maven//:org_testng_testng",
+    ],
+)
