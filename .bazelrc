@@ -1,3 +1,9 @@
+# rules_jvm_external pulls in rules_android, which reads ANDROID_HOME during
+# repo fetch. A machine with that variable set to an SDK that has no platforms
+# installed fails every build, including this one, which never compiles Android.
+# Empty value makes rules_android skip the local SDK.
+common --repo_env=ANDROID_HOME=
+
 # Hermetic JDK: Bazel downloads its own JDK 21, so the build does not depend on
 # whatever Java is installed (Windows, macOS, Linux, CI).
 common --java_language_version=21

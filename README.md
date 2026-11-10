@@ -56,3 +56,4 @@ A green Bazel sync is the project model. There is no Maven or Gradle file to imp
 - JDK 21 is downloaded by Bazel (`.bazelrc` sets `remotejdk_21`). A local JDK is not used for the build.
 - `.bazelrc` enables runfiles on Windows (`build:windows --enable_runfiles`). The TestNG suite is loaded from the classpath, so the test does not depend on runfile path separators.
 - Personal flags go in `user.bazelrc`, which is gitignored. Use forward slashes in paths there.
+- `.bazelrc` clears `ANDROID_HOME` for repository fetches. `rules_jvm_external` pulls Android rules, and an SDK without installed platforms otherwise aborts `bazel test` before any Java test runs.
