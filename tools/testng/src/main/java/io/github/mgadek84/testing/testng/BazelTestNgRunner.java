@@ -17,9 +17,9 @@ import org.testng.xml.XmlSuite;
  * (not the file system) so the same target works on Linux, macOS and Windows without runfiles
  * path handling.
  *
- * <p>Exit code contract with Bazel: 0 when nothing failed (skipped tests are allowed, e.g. when
- * Lichess rate-limits us), 1 on any test or configuration failure, or when no test ran at all
- * (which almost always means a broken suite file).
+ * <p>Exit code contract with Bazel: 0 when nothing failed (skipped tests are allowed), 1 on any
+ * test or configuration failure, or when no test ran at all (which almost always means a broken
+ * suite file).
  */
 public final class BazelTestNgRunner {
 

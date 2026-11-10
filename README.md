@@ -1,51 +1,31 @@
-# Lichess API tests: Java, TestNG, RestAssured, Cucumber, gRPC, Bazel
+# Virgin Australia booking tests: Java, TestNG, RestAssured, Bazel
 
-A small, real API test framework against the public [Lichess API](https://lichess.org/api), plus a gRPC service of our own so BloomRPC and Java gRPC tests have something to call. Lichess itself only speaks HTTP/JSON.
-
-Built as interview practice for an SDET role that asks for Java, TestNG, RestAssured, BDD (Cucumber), BloomRPC and Bazel in a monorepo.
+Two live API checks against the Virgin Australia booking site (`book.virginaustralia.com`), both taken from DevTools while searching Sydney to Brisbane.
 
 ## What is in here
 
 | Path | What it is |
 | --- | --- |
-| `api-tests/` | RestAssured + TestNG against Lichess, plus Virgin Australia booking calls (passenger config GET, flight-search GraphQL) |
-| `bdd-tests/` | Cucumber features on the TestNG runner. Steps reuse `api-tests` |
-| `chess-service/` | `ChessService` gRPC server: FEN validation, and a gateway over `GET /api/user/{username}` |
-| `proto/chess/v1/` | The `.proto` BloomRPC imports |
+| `api-tests/` | RestAssured + TestNG. One target, two tests |
 | `tools/testng/` | A Bazel macro that runs TestNG (Bazel's built-in runner only knows JUnit) |
-| `tools/grpc/` | Generates Java gRPC stubs from prebuilt `protoc` binaries, so no C++ compiler is required |
 
-Only unauthenticated Lichess endpoints are used: user profile, game export (JSON and PGN), puzzles, cloud eval. Those tests run serially, wait at least 1 second between calls, and on HTTP 429 wait and retry once, then skip instead of failing.
-
-`//api-tests:passenger_configuration_test` is a separate live check against the Virgin Australia booking site, both found in DevTools while searching Sydney to Brisbane:
+`//api-tests:virgin_booking_test` calls the booking site:
 
 - `GET .../passengerConfiguration.json`, the passenger-form config. It checks adult age bounds, name-field order, and the unaccompanied-minor rule. The URL contains the booking-app build id, so when Virgin ships a new build the test starts returning 404 and the constant in `PassengerConfigurationTest` has to be updated.
 - `POST /api/graphql` operation `bookingAirSearch`. The response field `originalResponse` is a large nested shopping document. The test walks one path through it with RestAssured JsonPath (first offer, SYD to BNE, airline `VA`, a price in AUD) instead of comparing the whole body. Header `x-sabre-storefront: VADX` is required. Brisbane's airport code is `BNE`. The departure date is fourteen days ahead. Imperva blocks that POST when RestAssured's Apache client sends it (HTTP 403) and allows the JDK `HttpClient`, so the call uses the JDK client and JsonPath does the checks.
 
-## Run everything
+## Run
 
 You need [Bazelisk](https://github.com/bazelbuild/bazelisk) on your `PATH` as `bazel`. It reads `.bazelversion` and downloads Bazel 9.3.2. Bazel then downloads its own JDK 21, so a system JDK is optional.
 
 ```bash
-bazel test //...          # everything, including the live Lichess tests
-bazel build //...         # compile only
-bazel test --config=hermetic //...   # no network: gRPC, FEN, rate-limit unit tests
-bazel test --config=lichess //...    # only the live Lichess tests
+bazel test //...
+bazel test //api-tests:virgin_booking_test
+bazel build //...
+bazel test --config=hermetic //...   # skips the live calls; nothing else is left to run
 ```
 
-Single targets:
-
-```bash
-bazel test //api-tests:lichess_api_test
-bazel test //api-tests:passenger_configuration_test
-bazel test //api-tests:framework_test
-bazel test //chess-service:chess_service_test
-bazel test //bdd-tests:bdd_hermetic_test
-bazel test //bdd-tests:bdd_lichess_test
-bazel run //chess-service:server          # gRPC on localhost:50051, for BloomRPC
-```
-
-The first run downloads Maven artifacts and the JDK. Later runs are incremental. Cucumber HTML reports land in `bazel-testlogs/bdd-tests/<target>/test.outputs/`.
+The target is tagged `external`, so Bazel does not cache a passing result. The first run downloads Maven artifacts and the JDK. TestNG's HTML report lands in `bazel-testlogs/api-tests/virgin_booking_test/test.outputs/testng/`. Bazel also writes JUnit XML to `test.xml` next to `test.log`.
 
 ## IntelliJ IDEA
 
@@ -65,59 +45,15 @@ Use the JetBrains Bazel plugin (generally available since July 2025, including o
    ```
 3. Install [IntelliJ IDEA](https://www.jetbrains.com/idea/) (Community is enough). `Ctrl+Alt+S` → Plugins → Marketplace → search **Bazel** → Install the one published by JetBrains → restart.
 4. File → Open and choose this repository folder (the one that contains `MODULE.bazel`). Trust the project. The plugin syncs with Bazel; the first sync downloads the JDK and dependencies and takes a few minutes.
-5. View → Tool Windows → Bazel. You get the targets from the `BUILD.bazel` files.
-6. Right-click a `*_test` target and choose **Test**. Double-click does the same. Useful ones:
-   - `//chess-service:chess_service_test` and `//api-tests:framework_test` and `//bdd-tests:bdd_hermetic_test` need no internet.
-   - `//api-tests:lichess_api_test` and `//bdd-tests:bdd_lichess_test` call lichess.org. Run them one at a time.
-   - Right-click `//chess-service:server` and choose **Run** to start the gRPC server for BloomRPC.
-7. To run the whole repo the way CI would: View → Tool Windows → Terminal, then `bazel test //...`.
+5. View → Tool Windows → Bazel. Right-click `//api-tests:virgin_booking_test` and choose **Test**.
+6. To run the whole repo the way CI would: View → Tool Windows → Terminal, then `bazel test //...`.
 
 A green Bazel sync is the project model. There is no Maven or Gradle file to import.
-
-## BloomRPC
-
-BloomRPC does not use server reflection, so you import the proto yourself.
-
-1. Start the server: `bazel run //chess-service:server`. It prints `ChessService listening on localhost:50051 (plaintext)`.
-2. In BloomRPC: the `+` next to the address → import `proto/chess/v1/chess_service.proto`. It has no imports, so no include path is needed.
-3. Address: `localhost:50051`. Turn **TLS off**. BloomRPC calls this "TLS" or a lock icon; plaintext means no TLS.
-4. `ValidateFen`, the starting position:
-
-```json
-{
-  "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
-}
-```
-
-Expect `valid: true`, `sideToMove: "WHITE"`, 16 pieces on each side.
-
-5. `ValidateFen` with a broken position (status OK, `valid: false` and `errors`):
-
-```json
-{ "fen": "8/8/8/8/8/8/8/8 w - - 0 1" }
-```
-
-6. `ValidateFen` with `{ "fen": "" }` → gRPC status `INVALID_ARGUMENT`.
-7. `GetPlayerProfile` (this one really calls Lichess):
-
-```json
-{ "username": "thibault" }
-```
-
-Expect `id: "thibault"` and a `ratings` list. An unknown name returns `NOT_FOUND`.
-
-Postman and grpcurl can call the same address. They also need the proto file, because the server does not expose gRPC reflection (that would pull a C++ build of the reflection stubs into this repo).
 
 ## Windows notes
 
 - Bazelisk via `winget install Bazel.Bazelisk`, plus `git config --global core.longpaths true`.
-- No Visual Studio / C++ toolchain is required. Protobuf and the gRPC Java plugin are prebuilt binaries downloaded by Bazel (`MODULE.bazel`).
 - JDK 21 is downloaded by Bazel (`.bazelrc` sets `remotejdk_21`). A local JDK is not used for the build.
-- `.bazelrc` enables runfiles on Windows (`build:windows --enable_runfiles`). TestNG suites and feature files are loaded from the classpath, so tests do not depend on runfile path separators.
+- `.bazelrc` enables runfiles on Windows (`build:windows --enable_runfiles`). The TestNG suite is loaded from the classpath, so the test does not depend on runfile path separators.
 - Personal flags go in `user.bazelrc`, which is gitignored. Use forward slashes in paths there.
-
-## Layout of a test
-
-`LichessSpecs` builds the shared RestAssured request (base URL, `User-Agent`, `Accept: application/json`, timeouts). `UsersApi`, `GamesApi`, `PuzzlesApi` and `CloudEvalApi` are the API objects. Every call goes through `RateLimitedExecutor`. Tests assert either with RestAssured's Hamcrest DSL (`response.then().body(...)`) or by deserializing into a record and using `LichessAssertions`.
-
-Cucumber step classes are thin: they call those same API objects and assertions. PicoContainer injects a fresh `ScenarioContext` per scenario.
+- `.bazelrc` clears `ANDROID_HOME` for repository fetches. `rules_jvm_external` pulls Android rules, and an SDK without installed platforms otherwise aborts `bazel test` before any Java test runs.
